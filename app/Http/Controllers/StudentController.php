@@ -1,12 +1,17 @@
 <?php
 
 namespace App\Http\Controllers;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\NewStudentNotification;
+use App\Mail\UpdatedStudentNotification;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\City;
 use App\Models\Group;
+
+
 
 class StudentController extends Controller
 {
@@ -58,7 +63,9 @@ public function store(Request $request)
     $asmensKodas = $this->generateAsmensKodas($request->gim_data);
     $student = Student::create(array_merge($request->all(), ['asmens_kodas' => $asmensKodas]));
 
+	Mail::to('forgamesandstuf0001@gmail.com')->send(new NewStudentNotification($student));
     return redirect()->route('students.index')->with('success', 'Studentas pridėtas!');
+	
 }
 
     public function edit(Student $student)
@@ -80,19 +87,23 @@ public function store(Request $request)
 
 
     public function update(Request $request, Student $student)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'surname' => 'required|string|max:255',
-            'address' => 'required|string',
-            'phone' => 'required|string|max:20',
-            'city_id' => 'required|exists:cities,id',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'surname' => 'required|string|max:255',
+        'address' => 'required|string',
+        'phone' => 'required|string|max:20',
+        'city_id' => 'required|exists:cities,id',
+        'grupe_id' => 'required|exists:groups,id',
+        'gim_data' => 'required|date',
+    ]);
 
-        $student->update($request->only(['name', 'surname', 'address', 'phone', 'city_id', 'grupe_id', 'gim_data']));
+    $student->update($request->all());
 
-        return redirect()->route('students.index')->with('success', 'Studentas atnaujintas!');
-    }
+    Mail::to('forgamesandstuf0001@gmail.com')->send(new UpdatedStudentNotification($student));
+
+    return redirect()->route('students.index')->with('success', 'Studento duomenys atnaujinti!');
+}
 
     public function destroy(Student $student)
     {
